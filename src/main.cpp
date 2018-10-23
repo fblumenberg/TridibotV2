@@ -6,6 +6,8 @@
 
 #include <ArduinoOTA.h>
 
+#include <WebSocketsServer.h>
+
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
@@ -14,6 +16,8 @@
 
 // called this way, it uses the default address 0x40
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+
+WebSocketsServer webSocket = WebSocketsServer(81);
 
 static void connectToWiFi();
 
@@ -257,6 +261,37 @@ void turntRight()
     baseMovement();
 }
 
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
+{
+    Serial.printf("[%u] get Message: %s\r\n", num, payload);
+    switch (type)
+    {
+    case WStype_DISCONNECTED:
+        break;
+    case WStype_CONNECTED:
+    {
+        IPAddress ip = webSocket.remoteIP(num);
+        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\r\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+    }
+    break;
+
+    case WStype_TEXT:
+    {
+        Serial.printf("[%u] get Text: %s\r\n", num, payload);
+        //String _payload = String((char *) &payload[0]);
+    }
+    break;
+
+    case WStype_BIN:
+    {
+        hexdump(payload, lenght);
+    }
+        // echo data back to browser
+        webSocket.sendBIN(num, payload, lenght);
+        break;
+    }
+}
+
 void setup()
 {
     // put your setup code here, to run once:
@@ -326,8 +361,10 @@ void setup()
     });
     ArduinoOTA.begin();
 
-    pwm.begin();
+    webSocket.begin();
+  webSocket.onEvent(webSocketEvent);
 
+    pwm.begin();
     pwm.setPWMFreq(60); // Analog servos run at ~60 Hz updates
 
     delay(10);
@@ -340,6 +377,9 @@ bool smallTest = false;
 uint16_t servoValue = (SERVOMAX - SERVOMIN) / 2 + SERVOMIN;
 void loop()
 {
+    ArduinoOTA.handle();
+    webSocket.loop();
+
     char variable = 'X';
     if (Serial.available())
     {
