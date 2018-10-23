@@ -261,131 +261,11 @@ void turntRight()
     baseMovement();
 }
 
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t lenght)
-{
-    Serial.printf("[%u] get Message: %s\r\n", num, payload);
-    switch (type)
-    {
-    case WStype_DISCONNECTED:
-        break;
-    case WStype_CONNECTED:
-    {
-        IPAddress ip = webSocket.remoteIP(num);
-        Serial.printf("[%u] Connected from %d.%d.%d.%d url: %s\r\n", num, ip[0], ip[1], ip[2], ip[3], payload);
-    }
-    break;
-
-    case WStype_TEXT:
-    {
-        Serial.printf("[%u] get Text: %s\r\n", num, payload);
-        //String _payload = String((char *) &payload[0]);
-    }
-    break;
-
-    case WStype_BIN:
-    {
-        hexdump(payload, lenght);
-    }
-        // echo data back to browser
-        webSocket.sendBIN(num, payload, lenght);
-        break;
-    }
-}
-
-void setup()
-{
-    // put your setup code here, to run once:
-    Serial.begin(9600);
-    Serial.println("8 channel Servo test!");
-
-    if (!SPIFFS.begin())
-    {
-        Serial.println("Failed to mount file system");
-        return;
-    }
-
-    if (!loadConfig())
-    {
-        Serial.println("Failed to load config");
-    }
-    else
-    {
-        Serial.println("Config loaded");
-    }
-
-    //if (config.doConnect)
-    connectToWiFi();
-
-    ArduinoOTA.onStart([]() {
-        String type;
-        if (ArduinoOTA.getCommand() == U_FLASH)
-        {
-            type = "sketch";
-        }
-        else
-        { // U_SPIFFS
-            type = "filesystem";
-        }
-
-        // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-        Serial.println("Start updating " + type);
-    });
-    ArduinoOTA.onEnd([]() {
-        Serial.println("\nEnd");
-    });
-    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    });
-    ArduinoOTA.onError([](ota_error_t error) {
-        Serial.printf("Error[%u]: ", error);
-        if (error == OTA_AUTH_ERROR)
-        {
-            Serial.println("Auth Failed");
-        }
-        else if (error == OTA_BEGIN_ERROR)
-        {
-            Serial.println("Begin Failed");
-        }
-        else if (error == OTA_CONNECT_ERROR)
-        {
-            Serial.println("Connect Failed");
-        }
-        else if (error == OTA_RECEIVE_ERROR)
-        {
-            Serial.println("Receive Failed");
-        }
-        else if (error == OTA_END_ERROR)
-        {
-            Serial.println("End Failed");
-        }
-    });
-    ArduinoOTA.begin();
-
-    webSocket.begin();
-  webSocket.onEvent(webSocketEvent);
-
-    pwm.begin();
-    pwm.setPWMFreq(60); // Analog servos run at ~60 Hz updates
-
-    delay(10);
-
-    centerAll();
-}
-
 int currentServo = 0;
 bool smallTest = false;
 uint16_t servoValue = (SERVOMAX - SERVOMIN) / 2 + SERVOMIN;
-void loop()
-{
-    ArduinoOTA.handle();
-    webSocket.loop();
 
-    char variable = 'X';
-    if (Serial.available())
-    {
-        variable = Serial.read();
-    }
-
+void handleCommand(char variable){
     switch (variable)
     {
     case '8':
@@ -490,6 +370,142 @@ void loop()
     default:
         break;
     }
+
+}
+
+#define USE_SERIAL Serial
+
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED:
+            USE_SERIAL.printf("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED:
+            {
+                IPAddress ip = webSocket.remoteIP(num);
+                USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+				
+				// send message to client
+				webSocket.sendTXT(num, "Connected");
+            }
+            break;
+        case WStype_TEXT:
+            USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
+
+            handleCommand(payload[0]);
+            
+            // send message to client
+            webSocket.sendTXT(num, "message here");
+
+            // send data to all connected clients
+            // webSocket.broadcastTXT("message here");
+            break;
+        case WStype_BIN:
+            USE_SERIAL.printf("[%u] get binary length: %u\n", num, length);
+            hexdump(payload, length);
+
+            // send message to client
+            // webSocket.sendBIN(num, payload, length);
+            break;
+    }
+
+}
+
+
+void setup()
+{
+    // put your setup code here, to run once:
+    Serial.begin(9600);
+    Serial.setDebugOutput(true);
+    Serial.println("8 channel Servo test!");
+
+    if (!SPIFFS.begin())
+    {
+        Serial.println("Failed to mount file system");
+        return;
+    }
+
+    if (!loadConfig())
+    {
+        Serial.println("Failed to load config");
+    }
+    else
+    {
+        Serial.println("Config loaded");
+    }
+
+    //if (config.doConnect)
+    connectToWiFi();
+
+    ArduinoOTA.onStart([]() {
+        String type;
+        if (ArduinoOTA.getCommand() == U_FLASH)
+        {
+            type = "sketch";
+        }
+        else
+        { // U_SPIFFS
+            type = "filesystem";
+        }
+
+        // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+        Serial.println("Start updating " + type);
+    });
+    ArduinoOTA.onEnd([]() {
+        Serial.println("\nEnd");
+    });
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+        Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+    ArduinoOTA.onError([](ota_error_t error) {
+        Serial.printf("Error[%u]: ", error);
+        if (error == OTA_AUTH_ERROR)
+        {
+            Serial.println("Auth Failed");
+        }
+        else if (error == OTA_BEGIN_ERROR)
+        {
+            Serial.println("Begin Failed");
+        }
+        else if (error == OTA_CONNECT_ERROR)
+        {
+            Serial.println("Connect Failed");
+        }
+        else if (error == OTA_RECEIVE_ERROR)
+        {
+            Serial.println("Receive Failed");
+        }
+        else if (error == OTA_END_ERROR)
+        {
+            Serial.println("End Failed");
+        }
+    });
+    ArduinoOTA.begin();
+
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
+
+    pwm.begin();
+    pwm.setPWMFreq(60); // Analog servos run at ~60 Hz updates
+
+    delay(10);
+
+    centerAll();
+}
+
+void loop()
+{
+    ArduinoOTA.handle();
+    webSocket.loop();
+    char variable = 'X';
+    if (Serial.available())
+    {
+        variable = Serial.read();
+    }
+
+    handleCommand(variable);
+
     if (smallTest)
     {
 
@@ -503,6 +519,8 @@ void loop()
     {
         delay(100);
     }
+
+    delay(10);
 }
 
 void connectToWiFi()
