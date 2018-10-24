@@ -24,14 +24,30 @@ void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
     break;
     case WStype_TEXT:
         Serial.printf("[%u] get Text: %s\n", num, payload);
+        {
+            char cmd = ' ';
+            String msg = (char *)payload;
+            String arg;
 
-        handleCommand(payload[0]);
+            if (msg.startsWith("P"))
+            {
+                cmd = msg[1];
+                arg = msg.substring(2);
+            }
+            else
+            {
+                cmd = msg[0];
+                arg = msg.substring(1);
+            }
 
-        // send message to client
-        webSocket.sendTXT(num, "message here");
+            handleCommand(cmd, arg);
 
-        // send data to all connected clients
-        // webSocket.broadcastTXT("message here");
+            // send message to client
+            webSocket.sendTXT(num, "message here");
+
+            // send data to all connected clients
+            // webSocket.broadcastTXT("message here");
+        }
         break;
     case WStype_BIN:
         Serial.printf("[%u] get binary length: %u\n", num, length);
@@ -49,6 +65,7 @@ void setupWebSocket()
     webSocket.onEvent(webSocketEvent);
 }
 
-void loopWebSocket(){
+void loopWebSocket()
+{
     webSocket.loop();
 }

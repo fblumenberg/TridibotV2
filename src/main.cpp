@@ -46,13 +46,13 @@ void loop()
     loopOTA();
     loopWebSocket();
 
-    char variable = 'X';
+    char cmd = 'X';
     if (Serial.available())
     {
-        variable = Serial.read();
+        cmd = Serial.read();
     }
 
-    handleCommand(variable);
+    handleCommand(cmd,"");
 
     delay(100);
 }

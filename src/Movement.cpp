@@ -4,6 +4,8 @@
 #include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
 
+#include "Movement.h"
+
 #define SERVOMIN 150 // this is the 'minimum' pulse length count (out of 4096)
 #define SERVOMAX 600 // this is the 'maximum' pulse length count (out of 4096)
 
@@ -262,10 +264,32 @@ void setupMovement()
     centerAll();
 }
 
-void handleCommand(char variable)
+void handleCommand(char cmd, String arg)
 {
-    switch (variable)
+    switch (cmd)
     {
+    case CMD_FORWARD:
+        walkForward();
+        break;
+    case CMD_BACKWARD:
+        walkBackward();
+        break;
+    case CMD_LEFT:
+        turntLeft();
+        break;
+    case CMD_RIGHT:
+        turntRight();
+        break;
+    case CMD_STAND:
+        standUp();
+        break;
+    case CMD_CENTER:
+        centerAll();
+        break;
+    case CMD_SETSPEED:
+        break;
+    case CMD_SETBRIGHTNES:
+        break;
     case '8':
         walkForward();
         break;
@@ -282,25 +306,25 @@ void handleCommand(char variable)
         standUp2();
         servoValue = joints[currentServo]->value();
         delay(50);
-        Serial.println(variable);
+        Serial.println(cmd);
         break;
     case 'u':
         standUp();
         servoValue = joints[currentServo]->value();
         delay(50);
-        Serial.println(variable);
+        Serial.println(cmd);
         break;
-    case 'C':
-        centerAll();
-        servoValue = joints[currentServo]->value();
-        delay(50);
-        Serial.println(variable);
-        break;
+    // case 'C':
+    //     centerAll();
+    //     servoValue = joints[currentServo]->value();
+    //     delay(50);
+    //     Serial.println(cmd);
+    //     break;
     case 'c':
         centerAll2();
         servoValue = joints[currentServo]->value();
         delay(50);
-        Serial.println(variable);
+        Serial.println(cmd);
         break;
     case 'N':
         currentServo++;
@@ -308,61 +332,61 @@ void handleCommand(char variable)
             currentServo = 0;
         servoValue = joints[currentServo]->value();
         delay(50);
-        Serial.print(variable);
+        Serial.print(cmd);
         Serial.println(currentServo);
         break;
     case 'T':
         smallTest = !smallTest;
         delay(50);
-        Serial.print(variable);
+        Serial.print(cmd);
         Serial.println(smallTest);
         break;
     case 'A':
         servoValue += 10;
         joints[currentServo]->setPin(servoValue);
         delay(50);
-        Serial.print(variable);
+        Serial.print(cmd);
         Serial.println(servoValue);
         break;
     case 'a':
         servoValue++;
         joints[currentServo]->setPin(servoValue);
         delay(50);
-        Serial.print(variable);
+        Serial.print(cmd);
         Serial.println(servoValue);
         break;
-    case 'S':
-        servoValue -= 10;
-        joints[currentServo]->setPin(servoValue);
-        delay(50);
-        Serial.print(variable);
-        Serial.println(servoValue);
-        break;
+    // case 'S':
+    //     servoValue -= 10;
+    //     joints[currentServo]->setPin(servoValue);
+    //     delay(50);
+    //     Serial.print(cmd);
+    //     Serial.println(servoValue);
+    //     break;
     case 's':
         servoValue--;
         joints[currentServo]->setPin(servoValue);
         delay(50);
-        Serial.print(variable);
+        Serial.print(cmd);
         Serial.println(servoValue);
         break;
     case 'n':
         joints[currentServo]->setMax();
-        Serial.println(variable);
+        Serial.println(cmd);
         Serial.println(joints[currentServo]->info());
         delay(50);
         break;
     case 'm':
         joints[currentServo]->setMin();
-        Serial.println(variable);
+        Serial.println(cmd);
         Serial.println(joints[currentServo]->info());
         delay(50);
         break;
     case 'I':
-        Serial.println(variable);
+        Serial.println(cmd);
         infoAll();
         break;
     case 'i':
-        Serial.println(variable);
+        Serial.println(cmd);
         Serial.println(joints[currentServo]->info());
         break;
     default:
